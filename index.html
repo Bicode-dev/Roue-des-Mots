@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Roue des Mots</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #000;
+            color: #fff;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+
+        .sidebar {
+            width: 320px;
+            background: #18181b;
+            border-right: 1px solid #27272a;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar h2 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 24px;
+        }
+
+        textarea {
+            flex: 1;
+            background: #27272a;
+            border: 1px solid #3f3f46;
+            color: #fff;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: monospace;
+            resize: none;
+            outline: none;
+            min-height: 400px;
+        }
+
+        textarea:focus {
+            border-color: #fff;
+            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2);
+        }
+
+        textarea::placeholder {
+            color: #71717a;
+        }
+
+        .count {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid #27272a;
+            font-size: 14px;
+            color: #71717a;
+        }
+
+        .wheel-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .wheel-wrapper {
+            position: relative;
+        }
+
+        .arrow {
+            position: absolute;
+            top: -60px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+        }
+
+        .arrow.pulse {
+            animation: pulse 1s infinite;
+        }
+
+        canvas {
+            cursor: pointer;
+            filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.5));
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #18181b;
+            border: 2px solid #fff;
+            border-radius: 16px;
+            padding: 48px;
+            text-align: center;
+            animation: bounceIn 0.5s;
+            max-width: 500px;
+        }
+
+        .modal-content h2 {
+            font-size: 24px;
+            margin-bottom: 24px;
+        }
+
+        .modal-content .winner {
+            font-size: 60px;
+            font-weight: bold;
+            margin-bottom: 32px;
+        }
+
+        .modal-content button {
+            width: 100%;
+            padding: 12px 24px;
+            background: #fff;
+            color: #000;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 12px;
+        }
+
+        .modal-content button:hover {
+            background: #e5e5e5;
+        }
+
+        .modal-content button.delete-btn {
+            background: #ef4444;
+            color: #fff;
+        }
+
+        .modal-content button.delete-btn:hover {
+            background: #dc2626;
+        }
+
+        .confetti {
+            position: fixed;
+            width: 8px;
+            height: 8px;
+            background: #fff;
+            pointer-events: none;
+            z-index: 50;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        @keyframes bounceIn {
+            0% {
+                transform: scale(0.3);
+                opacity: 0;
+            }
+            50% {
+                transform: scale(1.05);
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        @keyframes fall {
+            to {
+                transform: translateY(100vh) rotate(720deg);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <h2>Entrées</h2>
+            <textarea id="nameInput" placeholder="Entrez une entrée par ligne...">Mot1
+Mot2
+Mot3
+Mot4
+Mot5
+Mot6
+Mot7
+Mot8</textarea>
+            <div class="count" id="count">8 entrées</div>
+        </div>
+
+        <div class="wheel-container">
+            <div class="wheel-wrapper">
+                <svg class="arrow" id="arrow" width="40" height="60" viewBox="0 0 40 60">
+                    <polygon points="20,60 0,20 15,20 15,0 25,0 25,20 40,20" fill="white" stroke="white" stroke-width="2"/>
+                </svg>
+                <canvas id="wheel" width="450" height="450"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="modal">
+        <div class="modal-content">
+            <h2>Résultat</h2>
+            <div class="winner" id="winner"></div>
+            <button class="delete-btn" onclick="deleteWinner()">Supprimer</button>
+            <button onclick="closeModal()">Fermer</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('wheel');
+        const ctx = canvas.getContext('2d');
+        const nameInput = document.getElementById('nameInput');
+        const countEl = document.getElementById('count');
+        const modal = document.getElementById('modal');
+        const winnerEl = document.getElementById('winner');
+        const arrow = document.getElementById('arrow');
+
+        const colors = [
+            '#3B82F6', '#6366F1', '#8B5CF6', '#A855F7', '#EC4899',
+            '#EF4444', '#F59E0B', '#10B981', '#14B8A6', '#06B6D4'
+        ];
+
+        let names = [];
+        let rotation = 0;
+        let isSpinning = false;
+        let currentWinner = '';
+
+        function updateNames() {
+            names = nameInput.value.split('\n').filter(n => n.trim());
+            if (names.length === 0) names = ['Mot1'];
+            countEl.textContent = `${names.length} ${names.length > 1 ? 'entrées' : 'entrée'}`;
+            drawWheel();
+        }
+
+        function drawWheel() {
+            ctx.clearRect(0, 0, 450, 450);
+            
+            const centerX = 225;
+            const centerY = 225;
+            const radius = 210;
+
+            // Bordure
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 220, 0, Math.PI * 2);
+            ctx.fillStyle = '#27272a';
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 215, 0, Math.PI * 2);
+            ctx.fillStyle = '#18181b';
+            ctx.fill();
+
+            // Segments
+            const anglePerSegment = (Math.PI * 2) / names.length;
+            
+            for (let i = 0; i < names.length; i++) {
+                const startAngle = i * anglePerSegment - Math.PI / 2;
+                const endAngle = (i + 1) * anglePerSegment - Math.PI / 2;
+
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+                ctx.closePath();
+                ctx.fillStyle = colors[i % colors.length];
+                ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+
+                // Texte
+                ctx.save();
+                const midAngle = (startAngle + endAngle) / 2;
+                const textX = centerX + Math.cos(midAngle) * 140;
+                const textY = centerY + Math.sin(midAngle) * 140;
+                
+                ctx.translate(textX, textY);
+                ctx.rotate(midAngle + Math.PI / 2);
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 16px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(names[i], 0, 0);
+                ctx.restore();
+            }
+
+            // Centre
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 40, 0, Math.PI * 2);
+            ctx.fillStyle = '#18181b';
+            ctx.fill();
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 4;
+            ctx.stroke();
+
+            if (!isSpinning) {
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 16px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('GO', centerX, centerY);
+            }
+        }
+
+        function ultraSecureRandom() {
+            const now = performance.now();
+            const microTime = Date.now() * 1000000;
+            
+            const rand1 = Math.random();
+            const rand2 = Math.random();
+            const rand3 = Math.random();
+            const rand4 = Math.random();
+            const rand5 = Math.random();
+            
+            const crypto1 = ((now * rand1) % 1) * ((microTime * rand2) % 1);
+            const crypto2 = ((now * rand3) % 1) * ((microTime * rand4) % 1);
+            const crypto3 = ((now * rand5) % 1) * ((microTime * rand1) % 1);
+            
+            const layer1 = (crypto1 + crypto2 * rand3) % 1;
+            const layer2 = (crypto3 + crypto1 * rand4) % 1;
+            const layer3 = (crypto2 + crypto3 * rand5) % 1;
+            
+            const nanoVar1 = (performance.now() % 0.000001) * 1000000;
+            const nanoVar2 = (Date.now() % 0.000001) * 1000000;
+            
+            const final = (
+                (layer1 * nanoVar1 + layer2 * nanoVar2 + layer3 * rand1) / 3 +
+                (crypto1 + crypto2 + crypto3) / 3 +
+                (rand1 + rand2 + rand3 + rand4 + rand5) / 5
+            ) % 1;
+            
+            return final;
+        }
+
+        function spinWheel() {
+            if (isSpinning || names.length === 0) return;
+
+            isSpinning = true;
+            arrow.classList.add('pulse');
+
+            const spins = 5 + ultraSecureRandom() * 5;
+            const extraDegrees = ultraSecureRandom() * 360;
+            const targetRotation = rotation + spins * 360 + extraDegrees;
+            const duration = 4000;
+            const startTime = Date.now();
+            const startRotation = rotation;
+
+            function animate() {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                
+                // Easing
+                const easeProgress = progress < 0.5 
+                    ? 2 * progress * progress 
+                    : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+                
+                rotation = startRotation + (targetRotation - startRotation) * easeProgress;
+                
+                ctx.save();
+                ctx.translate(225, 225);
+                ctx.rotate((rotation * Math.PI) / 180);
+                ctx.translate(-225, -225);
+                drawWheel();
+                ctx.restore();
+
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    rotation = targetRotation % 360;
+                    isSpinning = false;
+                    arrow.classList.remove('pulse');
+                    showWinner();
+                }
+            }
+
+            animate();
+        }
+
+        function showWinner() {
+            const normalizedRotation = rotation % 360;
+            const segmentAngle = 360 / names.length;
+            const adjustedRotation = (360 - normalizedRotation) % 360;
+            const segmentIndex = Math.floor(adjustedRotation / segmentAngle) % names.length;
+            
+            currentWinner = names[segmentIndex];
+            winnerEl.textContent = currentWinner;
+            
+            // Créer les confettis avec toutes les couleurs
+            createConfetti();
+            
+            modal.classList.add('show');
+        }
+
+        function closeModal() {
+            modal.classList.remove('show');
+        }
+
+        function deleteWinner() {
+            if (currentWinner) {
+                const updatedNames = names.filter(n => n !== currentWinner);
+                nameInput.value = updatedNames.join('\n');
+                updateNames();
+                closeModal();
+            }
+        }
+
+        function createConfetti() {
+            for (let i = 0; i < 100; i++) {
+                setTimeout(() => {
+                    const confetti = document.createElement('div');
+                    confetti.className = 'confetti';
+                    confetti.style.left = Math.random() * window.innerWidth + 'px';
+                    confetti.style.top = '-20px';
+                    // Utiliser toutes les couleurs aléatoirement
+                    confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+                    confetti.style.animation = `fall ${2 + Math.random() * 3}s linear forwards`;
+                    document.body.appendChild(confetti);
+                    
+                    setTimeout(() => confetti.remove(), 5000);
+                }, i * 20);
+            }
+        }
+
+        nameInput.addEventListener('input', updateNames);
+        canvas.addEventListener('click', spinWheel);
+
+        updateNames();
+    </script>
+</body>
+</html>
