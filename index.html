@@ -25,8 +25,84 @@
             height: 100vh;
         }
 
+        /* Interface mobile */
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column-reverse;
+            }
+
+            .sidebar {
+                width: 100%;
+                height: auto;
+                max-height: 35vh;
+                border-right: none;
+                border-top: 1px solid #27272a;
+                border-bottom: none;
+                padding: 16px;
+            }
+
+            .sidebar h2 {
+                font-size: 18px;
+                margin-bottom: 12px;
+            }
+
+            textarea {
+                min-height: 120px;
+                font-size: 13px;
+            }
+
+            .count {
+                margin-top: 8px;
+                padding-top: 8px;
+            }
+
+            .wheel-container {
+                flex: 1;
+                padding: 20px;
+            }
+
+            .wheel-wrapper {
+                transform: scale(0.65);
+            }
+
+            .arrow {
+                top: -50px;
+            }
+
+            canvas {
+                max-width: 100%;
+                height: auto;
+            }
+
+            .modal-content {
+                padding: 32px 24px;
+                margin: 16px;
+            }
+
+            .modal-content h2 {
+                font-size: 20px;
+                margin-bottom: 16px;
+            }
+
+            .modal-content .winner {
+                font-size: 40px;
+                margin-bottom: 24px;
+            }
+
+            .modal-content button {
+                font-size: 14px;
+                padding: 10px 20px;
+            }
+        }
+
+        /* Interface desktop */
+        @media (min-width: 769px) {
+            .sidebar {
+                width: 320px;
+            }
+        }
+
         .sidebar {
-            width: 320px;
             background: #18181b;
             border-right: 1px solid #27272a;
             padding: 24px;
@@ -165,6 +241,57 @@
             background: #dc2626;
         }
 
+        .fullscreen-btn {
+            display: none;
+            position: fixed;
+            bottom: 50%;
+            right: 16px;
+            transform: translateY(50%);
+            background: #fff;
+            color: #000;
+            border: none;
+            border-radius: 50%;
+            width: 48px;
+            height: 48px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            z-index: 30;
+            font-size: 20px;
+            transition: all 0.2s;
+        }
+
+        .fullscreen-btn:hover {
+            background: #e5e5e5;
+            transform: translateY(50%) scale(1.1);
+        }
+
+        @media (max-width: 768px) {
+            .fullscreen-btn {
+                display: block;
+            }
+
+            .wheel-container.fullscreen-mode {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100vw;
+                height: 100vh;
+                z-index: 40;
+                background: #000;
+                padding: 0;
+            }
+
+            .wheel-container.fullscreen-mode .wheel-wrapper {
+                transform: scale(0.9);
+            }
+
+            .fullscreen-btn.active {
+                bottom: 16px;
+                right: 16px;
+                transform: none;
+            }
+        }
+
         .confetti {
             position: fixed;
             width: 8px;
@@ -216,7 +343,8 @@ Mot8</textarea>
             <div class="count" id="count">8 entrées</div>
         </div>
 
-        <div class="wheel-container">
+        <div class="wheel-container" id="wheelContainer">
+            <button class="fullscreen-btn" id="fullscreenBtn" onclick="toggleFullscreen()">⛶</button>
             <div class="wheel-wrapper">
                 <svg class="arrow" id="arrow" width="40" height="60" viewBox="0 0 40 60">
                     <polygon points="20,60 0,20 15,20 15,0 25,0 25,20 40,20" fill="white" stroke="white" stroke-width="2"/>
@@ -243,6 +371,8 @@ Mot8</textarea>
         const modal = document.getElementById('modal');
         const winnerEl = document.getElementById('winner');
         const arrow = document.getElementById('arrow');
+        const wheelContainer = document.getElementById('wheelContainer');
+        const fullscreenBtn = document.getElementById('fullscreenBtn');
 
         const colors = [
             '#3B82F6', '#6366F1', '#8B5CF6', '#A855F7', '#EC4899',
@@ -446,6 +576,17 @@ Mot8</textarea>
                     
                     setTimeout(() => confetti.remove(), 5000);
                 }, i * 20);
+            }
+        }
+
+        function toggleFullscreen() {
+            wheelContainer.classList.toggle('fullscreen-mode');
+            fullscreenBtn.classList.toggle('active');
+            
+            if (wheelContainer.classList.contains('fullscreen-mode')) {
+                fullscreenBtn.textContent = '✕';
+            } else {
+                fullscreenBtn.textContent = '⛶';
             }
         }
 
