@@ -20,6 +20,12 @@
             overflow: hidden;
         }
 
+        @media (max-width: 768px) {
+            body {
+                overflow-y: auto;
+            }
+        }
+
         .container {
             display: flex;
             height: 100vh;
@@ -29,12 +35,14 @@
         @media (max-width: 768px) {
             .container {
                 flex-direction: column-reverse;
+                height: auto;
+                min-height: 100vh;
             }
 
             .sidebar {
                 width: 100%;
                 height: auto;
-                max-height: 35vh;
+                max-height: none;
                 border-right: none;
                 border-top: 1px solid #27272a;
                 border-bottom: none;
@@ -47,7 +55,7 @@
             }
 
             textarea {
-                min-height: 120px;
+                min-height: 200px;
                 font-size: 13px;
             }
 
@@ -57,7 +65,7 @@
             }
 
             .wheel-container {
-                flex: 1;
+                min-height: 100vh;
                 padding: 20px;
             }
 
